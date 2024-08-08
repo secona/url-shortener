@@ -6,20 +6,14 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-)
 
-type NotFoundData struct {
-	Slug string
-}
+	"github.com/secona/url-shortener/database"
+)
 
 var slugRegex = regexp.MustCompile(`^[a-zA-Z0-9\-]+$`)
 
 func main() {
-	u, _ := url.Parse("https://google.com")
-	fmt.Printf("%+v\n", *u)
-
-	links := map[string]url.URL{}
-
+	db := database.Open()
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +25,7 @@ func main() {
 			return
 		}
 
-		value, ok := links[slug]
+		value, ok := db.GetShortenedLink(slug)
 
 		if !ok {
 			t := template.Must(template.ParseFiles("templates/404.html"))
@@ -39,7 +33,7 @@ func main() {
 			return
 		}
 
-		http.Redirect(w, r, value.String(), 301)
+		http.Redirect(w, r, value, 301)
 	})
 
 	mux.HandleFunc("POST /shorten", func(w http.ResponseWriter, r *http.Request) {
@@ -50,13 +44,6 @@ func main() {
 			return
 		}
 
-		_, exists := links[slug]
-
-		if exists {
-			fmt.Fprintf(w, "Shortened link <strong>%s<strong> already exists!", slug)
-			return
-		}
-
 		url, err := parseURL(r.FormValue("url"))
 
 		if err != nil {
@@ -64,7 +51,12 @@ func main() {
 			return
 		}
 
-		links[slug] = *url
+		err = db.CreateShortenedLink(slug, url.String())
+
+		if err != nil {
+			fmt.Fprintf(w, err.Error())
+			return
+		}
 
 		fmt.Fprintf(w, "Successfully shortened link!")
 	})

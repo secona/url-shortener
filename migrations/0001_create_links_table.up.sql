@@ -1,0 +1,4 @@
+CREATE TABLE links (
+	slug TEXT PRIMARY KEY NOT NULL,
+	link TEXT NOT NULL
+);
