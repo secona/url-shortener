@@ -5,14 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <script src="https://unpkg.com/htmx.org@2.0.1" integrity="sha384-QWGpdj554B4ETpJJC9z+ZHJcA/i59TyjxEPXiiUgN2WmTyV5OEZWCD6gQhgkdpB/" crossorigin="anonymous"></script>
-    <title>Shortened Link Not Found!</title>
+    <title>URL Shortener</title>
+
+    <style>
+    body {
+      padding: 0;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      min-height: 100vh;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      row-gap: 0.2rem;
+      max-width: 12rem;
+    }
+    </style>
   </head>
   <body>	
     <form hx-post="/shorten" hx-target="#response" hx-swap="innerHTML">
       <input name="slug" placeholder="slug">
       <input name="url" placeholder="url">
-      <button type="submit">Submit</button>
+      <button type="submit">Shorten!</button>
+      <div id="response"></div>
     </form>
-    <div id="response"></div>
   </body>
 </html>
