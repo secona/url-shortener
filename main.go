@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"net/url"
 	"regexp"
 )
 
@@ -14,10 +15,10 @@ type NotFoundData struct {
 var slugRegex = regexp.MustCompile(`^[a-zA-Z0-9\-]+$`)
 
 func main() {
-	links := map[string]string{
-		"google": "https://google.com",
-		"pacil":  "https://cs.ui.ac.id",
-	}
+	u, _ := url.Parse("https://google.com")
+	fmt.Printf("%+v\n", *u)
+
+	links := map[string]url.URL{}
 
 	mux := http.NewServeMux()
 
@@ -38,7 +39,7 @@ func main() {
 			return
 		}
 
-		http.Redirect(w, r, value, 301)
+		http.Redirect(w, r, value.String(), 301)
 	})
 
 	mux.HandleFunc("POST /shorten", func(w http.ResponseWriter, r *http.Request) {
@@ -49,8 +50,6 @@ func main() {
 			return
 		}
 
-		url := r.FormValue("url")
-
 		_, exists := links[slug]
 
 		if exists {
@@ -58,9 +57,37 @@ func main() {
 			return
 		}
 
-		links[slug] = url
+		url, err := parseURL(r.FormValue("url"))
+
+		if err != nil {
+			fmt.Fprintf(w, err.Error())
+			return
+		}
+
+		links[slug] = *url
+
 		fmt.Fprintf(w, "Successfully shortened link!")
 	})
 
 	http.ListenAndServe(":8080", mux)
+}
+
+func parseURL(raw string) (*url.URL, error) {
+	url, err := url.Parse(raw)
+	
+	if err != nil {
+		return nil, err
+	}
+
+	// check if the scheme is either "http" or "https"
+	if url.Scheme != "http" && url.Scheme != "https" {
+		return nil, fmt.Errorf("Invalid URL: must be either \"http\" or \"https\".")
+	}
+
+	// check if host is present
+	if url.Host == "" {
+		return nil, fmt.Errorf("Invalid URL: empty host.")
+	}
+
+	return url, nil
 }
