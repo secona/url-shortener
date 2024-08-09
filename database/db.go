@@ -34,7 +34,12 @@ func Open() DB {
 }
 
 func (db *DB) CreateShortenedLink(slug string, link string) error {
-	_, err := db.DB.Exec("INSERT INTO links (slug, link) VALUES (?, ?)", slug, link)
+	_, err := db.DB.Exec(
+		"INSERT INTO links (slug, link, user_id) VALUES (?, ?, ?)",
+		slug,
+		link,
+		sql.NullInt32{},
+	)
 
 	if err == sqlite3.ErrConstraint {
 		return fmt.Errorf("Shortened link <strong>%s<strong> already exists!", slug)
