@@ -1,33 +1,65 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <script src="https://unpkg.com/htmx.org@2.0.1" integrity="sha384-QWGpdj554B4ETpJJC9z+ZHJcA/i59TyjxEPXiiUgN2WmTyV5OEZWCD6gQhgkdpB/" crossorigin="anonymous"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <script
+      src="https://unpkg.com/htmx.org@2.0.1"
+      integrity="sha384-QWGpdj554B4ETpJJC9z+ZHJcA/i59TyjxEPXiiUgN2WmTyV5OEZWCD6gQhgkdpB/"
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://accounts.google.com/gsi/client" async></script>
     <title>URL Shortener</title>
 
     <style>
-    body {
-      padding: 0;
-      margin: 0;
-      display: grid;
-      place-items: center;
-      min-height: 100vh;
-    }
+      body {
+        padding: 0;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+      }
 
-    form {
-      display: flex;
-      flex-direction: column;
-      row-gap: 0.2rem;
-      max-width: 12rem;
-    }
+      form {
+        display: flex;
+        flex-direction: column;
+        row-gap: 0.2rem;
+        max-width: 12rem;
+      }
     </style>
+
+    <script>
+      window.onload = function () {
+        google.accounts.id.initialize({
+          client_id: "{{ . }}",
+          callback: onSignIn,
+          ux_mode: "popup",
+        });
+
+        google.accounts.id.renderButton(document.getElementById("login"), {
+          theme: "filled_blue",
+          size: "medium",
+          shape: "rectangle",
+        });
+      };
+
+      function onSignIn(response) {
+        htmx.ajax("POST", "/login", {
+          values: {
+            credential: response.credential,
+          },
+          target: "#response",
+          swap: "innerHTML",
+        });
+      }
+    </script>
   </head>
-  <body>	
+  <body>
+    <div id="login"></div>
     <form hx-post="/shorten" hx-target="#response" hx-swap="innerHTML">
-      <input name="slug" placeholder="slug">
-      <input name="url" placeholder="url">
+      <input name="slug" placeholder="slug" />
+      <input name="url" placeholder="url" />
       <button type="submit">Shorten!</button>
       <div id="response"></div>
     </form>

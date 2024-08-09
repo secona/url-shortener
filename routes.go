@@ -6,9 +6,10 @@ import (
 	"net/http"
 
 	"github.com/secona/url-shortener/database"
+	"google.golang.org/api/idtoken"
 )
 
-func CreateMux() *http.ServeMux {
+func CreateMux(clientID string) *http.ServeMux {
 	db := database.Open()
 	mux := http.NewServeMux()
 
@@ -17,7 +18,7 @@ func CreateMux() *http.ServeMux {
 
 		if slug == "" {
 			t := template.Must(template.ParseFiles("templates/index.html"))
-			t.Execute(w, nil)
+			t.Execute(w, clientID)
 			return
 		}
 
@@ -55,6 +56,19 @@ func CreateMux() *http.ServeMux {
 		}
 
 		fmt.Fprintf(w, "Successfully shortened link!")
+	})
+
+	mux.HandleFunc("POST /login", func(w http.ResponseWriter, r *http.Request) {
+		credential := r.FormValue("credential")
+
+		payload, err := idtoken.Validate(r.Context(), credential, clientID)
+
+		if err != nil {
+			fmt.Fprintf(w, err.Error())
+			return
+		}
+
+		fmt.Fprintf(w, payload.Claims["email"].(string))
 	})
 
 	return mux
