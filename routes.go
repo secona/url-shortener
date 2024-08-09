@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/secona/url-shortener/database"
 	"google.golang.org/api/idtoken"
 )
@@ -76,14 +74,7 @@ func CreateMux() *chi.Mux {
 			return
 		}
 
-		exp := time.Now().Add(time.Hour * 24 * 7)
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, TokenClaims{
-			UserID: userID,
-			RegisteredClaims: jwt.RegisteredClaims{
-				ExpiresAt: jwt.NewNumericDate(exp),
-			},
-		})
-		signed, err := token.SignedString(JwtSecret)
+		token, expiresAt, err := createAccessToken(userID)
 
 		if err != nil {
 			fmt.Fprintf(w, err.Error())
@@ -92,8 +83,8 @@ func CreateMux() *chi.Mux {
 
 		http.SetCookie(w, &http.Cookie{
 			Name:     "access_token",
-			Value:    signed,
-			Expires:  exp,
+			Value:    token,
+			Expires:  expiresAt,
 			HttpOnly: true,
 			SameSite: http.SameSiteLaxMode,
 		})

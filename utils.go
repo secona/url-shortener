@@ -4,9 +4,17 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var slugRegex = regexp.MustCompile(`^[a-zA-Z0-9\-]+$`)
+
+type TokenClaims struct {
+	UserID string `json:"user_id"`
+	jwt.RegisteredClaims
+}
 
 func parseURL(raw string) (*url.URL, error) {
 	url, err := url.Parse(raw)
@@ -34,4 +42,37 @@ func parseSlug(slug string) (string, error) {
 	}
 
 	return slug, nil
+}
+
+func createAccessToken(userID string) (string, time.Time, error) {
+	expiresAt := time.Now().Add(time.Hour * 24 * 7)
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, TokenClaims{
+		UserID: userID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+		},
+	})
+
+	signed, err := token.SignedString(JwtSecret)
+
+	return signed, expiresAt, err
+}
+
+func parseAccessToken(value string) (*TokenClaims, error) {
+	token, err := jwt.ParseWithClaims(value, &TokenClaims{}, func(t *jwt.Token) (interface{}, error) {
+		return JwtSecret, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(*TokenClaims)
+
+	if !ok {
+		return nil, fmt.Errorf("parsing token claims")
+	}
+
+	return claims, nil
 }
