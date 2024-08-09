@@ -13,6 +13,12 @@ type DB struct {
 	DB *sql.DB
 }
 
+type User struct {
+	Name string
+	Email string
+	Pic string
+}
+
 func Open() DB {
 	db, err := sql.Open("sqlite3", "file:main.sqlite3")
 
@@ -44,4 +50,19 @@ func (db *DB) GetShortenedLink(slug string) (string, bool) {
 	}
 
 	return link, true
+}
+
+func (db *DB) UpsertUser(user User) error {
+	_, err := db.DB.Exec(
+		"INSERT INTO users (name, email, pic) VALUES (?, ?, ?)",
+		user.Name,
+		user.Email,
+		user.Pic,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

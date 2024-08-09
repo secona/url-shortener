@@ -68,6 +68,17 @@ func CreateMux(clientID string) *http.ServeMux {
 			return
 		}
 
+		user := database.User{
+			Name: payload.Claims["name"].(string),
+			Email: payload.Claims["email"].(string),
+			Pic: payload.Claims["picture"].(string),
+		}
+
+		if err := db.UpsertUser(user); err != nil {
+			fmt.Fprintf(w, err.Error())
+			return
+		}
+
 		fmt.Fprintf(w, payload.Claims["email"].(string))
 	})
 
