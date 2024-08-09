@@ -5,35 +5,27 @@ import (
 	"html/template"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/secona/url-shortener/database"
 	"google.golang.org/api/idtoken"
 )
 
-func CreateMux(clientID string) *http.ServeMux {
+func CreateMux(clientID string) *chi.Mux {
 	db := database.Open()
-	mux := http.NewServeMux()
+	r := chi.NewRouter()
 
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		slug := r.URL.String()[1:]
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
 
-		if slug == "" {
-			t := template.Must(template.ParseFiles("templates/index.html"))
-			t.Execute(w, clientID)
-			return
-		}
-
-		value, ok := db.GetShortenedLink(slug)
-
-		if !ok {
-			t := template.Must(template.ParseFiles("templates/404.html"))
-			t.Execute(w, slug)
-			return
-		}
-
-		http.Redirect(w, r, value, 301)
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		t := template.Must(template.ParseFiles("templates/index.html"))
+		t.Execute(w, clientID)
 	})
 
-	mux.HandleFunc("POST /shorten", func(w http.ResponseWriter, r *http.Request) {
+	r.Post("/shorten", func(w http.ResponseWriter, r *http.Request) {
 		slug, err := parseSlug(r.FormValue("slug"))
 
 		if err != nil {
@@ -58,7 +50,7 @@ func CreateMux(clientID string) *http.ServeMux {
 		fmt.Fprintf(w, "Successfully shortened link!")
 	})
 
-	mux.HandleFunc("POST /login", func(w http.ResponseWriter, r *http.Request) {
+	r.Post("/login", func(w http.ResponseWriter, r *http.Request) {
 		credential := r.FormValue("credential")
 
 		payload, err := idtoken.Validate(r.Context(), credential, clientID)
@@ -69,9 +61,9 @@ func CreateMux(clientID string) *http.ServeMux {
 		}
 
 		user := database.User{
-			Name: payload.Claims["name"].(string),
+			Name:  payload.Claims["name"].(string),
 			Email: payload.Claims["email"].(string),
-			Pic: payload.Claims["picture"].(string),
+			Pic:   payload.Claims["picture"].(string),
 		}
 
 		if err := db.UpsertUser(user); err != nil {
@@ -82,5 +74,18 @@ func CreateMux(clientID string) *http.ServeMux {
 		fmt.Fprintf(w, payload.Claims["email"].(string))
 	})
 
-	return mux
+	r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+		slug := r.URL.String()[1:]
+		value, ok := db.GetShortenedLink(slug)
+
+		if !ok {
+			t := template.Must(template.ParseFiles("templates/404.html"))
+			t.Execute(w, slug)
+			return
+		}
+
+		http.Redirect(w, r, value, 301)
+	})
+
+	return r
 }
