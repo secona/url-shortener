@@ -1,18 +1,14 @@
-package main
+package urlshortener
 
 import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"net/url"
-	"regexp"
 
 	"github.com/secona/url-shortener/database"
 )
 
-var slugRegex = regexp.MustCompile(`^[a-zA-Z0-9\-]+$`)
-
-func main() {
+func CreateMux() *http.ServeMux {
 	db := database.Open()
 	mux := http.NewServeMux()
 
@@ -37,10 +33,10 @@ func main() {
 	})
 
 	mux.HandleFunc("POST /shorten", func(w http.ResponseWriter, r *http.Request) {
-		slug := r.FormValue("slug")
+		slug, err := parseSlug(r.FormValue("slug"))
 
-		if !slugRegex.MatchString(slug) {
-			fmt.Fprintf(w, "Shortened link must only contain alphabets, numbers, and hyphens!")
+		if err != nil {
+			fmt.Fprintf(w, err.Error())
 			return
 		}
 
@@ -61,25 +57,5 @@ func main() {
 		fmt.Fprintf(w, "Successfully shortened link!")
 	})
 
-	http.ListenAndServe(":8080", mux)
-}
-
-func parseURL(raw string) (*url.URL, error) {
-	url, err := url.Parse(raw)
-	
-	if err != nil {
-		return nil, err
-	}
-
-	// check if the scheme is either "http" or "https"
-	if url.Scheme != "http" && url.Scheme != "https" {
-		return nil, fmt.Errorf("Invalid URL: must be either \"http\" or \"https\".")
-	}
-
-	// check if host is present
-	if url.Host == "" {
-		return nil, fmt.Errorf("Invalid URL: empty host.")
-	}
-
-	return url, nil
+	return mux
 }
