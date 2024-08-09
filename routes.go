@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/secona/url-shortener/database"
 	"google.golang.org/api/idtoken"
 )
 
-func CreateMux(clientID string) *chi.Mux {
+func CreateMux(clientID string, jwtSecret string) *chi.Mux {
 	db := database.Open()
 	r := chi.NewRouter()
 
@@ -60,16 +62,36 @@ func CreateMux(clientID string) *chi.Mux {
 			return
 		}
 
-		user := database.User{
+		userID, err := db.UpsertUser(database.User{
 			Name:  payload.Claims["name"].(string),
 			Email: payload.Claims["email"].(string),
 			Pic:   payload.Claims["picture"].(string),
-		}
+		})
 
-		if err := db.UpsertUser(user); err != nil {
+		if err != nil {
 			fmt.Fprintf(w, err.Error())
 			return
 		}
+
+		exp := time.Now().Add(7 * 24 * time.Hour)
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"user_id": userID,
+			"exp":     exp,
+		})
+		signed, err := token.SignedString([]byte(jwtSecret))
+
+		if err != nil {
+			fmt.Fprintf(w, err.Error())
+			return
+		}
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     "access_token",
+			Value:    signed,
+			Expires:  exp,
+			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
+		})
 
 		fmt.Fprintf(w, payload.Claims["email"].(string))
 	})

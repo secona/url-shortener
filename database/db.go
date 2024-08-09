@@ -57,17 +57,18 @@ func (db *DB) GetShortenedLink(slug string) (string, bool) {
 	return link, true
 }
 
-func (db *DB) UpsertUser(user User) error {
-	_, err := db.DB.Exec(
-		"INSERT INTO users (name, email, pic) VALUES (?, ?, ?)",
+func (db *DB) UpsertUser(user User) (string, error) {
+	row := db.DB.QueryRow(
+		"INSERT INTO users (name, email, pic) VALUES (?, ?, ?) ON CONFLICT DO UPDATE SET pic = excluded.pic RETURNING id",
 		user.Name,
 		user.Email,
 		user.Pic,
 	)
 
-	if err != nil {
-		return err
+	var result string
+	if err := row.Scan(&result); err != nil {
+		return "", err
 	}
 
-	return nil
+	return result, nil
 }
