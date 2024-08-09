@@ -14,9 +14,9 @@ type DB struct {
 }
 
 type User struct {
-	Name string
+	Name  string
 	Email string
-	Pic string
+	Pic   string
 }
 
 func Open() DB {

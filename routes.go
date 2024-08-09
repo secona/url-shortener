@@ -27,7 +27,7 @@ func CreateMux(clientID string, jwtSecret string) *chi.Mux {
 		t.Execute(w, clientID)
 	})
 
-	r.Post("/shorten", func(w http.ResponseWriter, r *http.Request) {
+	r.With(authenticated).Post("/shorten", func(w http.ResponseWriter, r *http.Request) {
 		slug, err := parseSlug(r.FormValue("slug"))
 
 		if err != nil {
@@ -73,10 +73,12 @@ func CreateMux(clientID string, jwtSecret string) *chi.Mux {
 			return
 		}
 
-		exp := time.Now().Add(7 * 24 * time.Hour)
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"user_id": userID,
-			"exp":     exp,
+		exp := time.Now().Add(time.Hour * 24 * 7)
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, TokenClaims{
+			UserID: userID,
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(exp),
+			},
 		})
 		signed, err := token.SignedString([]byte(jwtSecret))
 
