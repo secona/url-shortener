@@ -8,13 +8,18 @@ import (
 	"github.com/secona/url-shortener"
 )
 
-func main() {
+func init() {
 	env, err := godotenv.Read()
 
 	if err != nil {
-		log.Fatalln("Error reading .env!")
+		log.Fatalf("Error reading .env file: %s", err.Error())
 	}
 
-	mux := urlshortener.CreateMux(env["GOOGLE_CLIENT_ID"], env["JWT_SECRET"])
+	urlshortener.ClientID = env["GOOGLE_CLIENT_ID"]
+	urlshortener.JwtSecret = []byte(env["JWT_SECRET"])
+}
+
+func main() {
+	mux := urlshortener.CreateMux()
 	http.ListenAndServe(":8080", mux)
 }

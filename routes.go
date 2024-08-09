@@ -13,7 +13,10 @@ import (
 	"google.golang.org/api/idtoken"
 )
 
-func CreateMux(clientID string, jwtSecret string) *chi.Mux {
+var ClientID string
+var JwtSecret []byte
+
+func CreateMux() *chi.Mux {
 	db := database.Open()
 	r := chi.NewRouter()
 
@@ -24,7 +27,7 @@ func CreateMux(clientID string, jwtSecret string) *chi.Mux {
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		t := template.Must(template.ParseFiles("templates/index.html"))
-		t.Execute(w, clientID)
+		t.Execute(w, ClientID)
 	})
 
 	r.With(authenticated).Post("/shorten", func(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +58,7 @@ func CreateMux(clientID string, jwtSecret string) *chi.Mux {
 	r.Post("/login", func(w http.ResponseWriter, r *http.Request) {
 		credential := r.FormValue("credential")
 
-		payload, err := idtoken.Validate(r.Context(), credential, clientID)
+		payload, err := idtoken.Validate(r.Context(), credential, ClientID)
 
 		if err != nil {
 			fmt.Fprintf(w, err.Error())
@@ -80,7 +83,7 @@ func CreateMux(clientID string, jwtSecret string) *chi.Mux {
 				ExpiresAt: jwt.NewNumericDate(exp),
 			},
 		})
-		signed, err := token.SignedString([]byte(jwtSecret))
+		signed, err := token.SignedString(JwtSecret)
 
 		if err != nil {
 			fmt.Fprintf(w, err.Error())

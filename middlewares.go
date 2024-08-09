@@ -13,8 +13,6 @@ type TokenClaims struct {
 	jwt.RegisteredClaims
 }
 
-var signingKey = []byte("iu2h3rnweinqwnchmfio3whmfcuiybiyfhy792hcmm3rmnc934chxmt9hmg34imni34utyhgcbni3m4cx3i45")
-
 func authenticated(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth, err := r.Cookie("access_token")
@@ -25,7 +23,7 @@ func authenticated(next http.Handler) http.Handler {
 		}
 
 		token, err := jwt.ParseWithClaims(auth.Value, &TokenClaims{}, func(t *jwt.Token) (interface{}, error) {
-			return signingKey, nil
+			return JwtSecret, nil
 		})
 
 		if err != nil {
