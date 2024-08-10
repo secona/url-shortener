@@ -9,66 +9,69 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type DB struct {
-	DB *sql.DB
-}
+var DB *sql.DB
 
-type User struct {
-	Name  string
-	Email string
-	Pic   string
-}
-
-func Open() DB {
-	db, err := sql.Open("sqlite3", "file:main.sqlite3")
+func Open() {
+	var err error
+	DB, err = sql.Open("sqlite3", "file:main.sqlite3")
 
 	if err != nil {
 		log.Fatalf("Error opening database: %s", err.Error())
 	}
 
-	if err := db.Ping(); err != nil {
+	if err := DB.Ping(); err != nil {
 		log.Fatalf("Error pinging database: %s", err.Error())
 	}
-
-	return DB{db}
 }
 
-func (db *DB) CreateShortenedLink(slug string, link string) error {
-	_, err := db.DB.Exec(
+type Link struct {
+	ID     string
+	Slug   string
+	Link   string
+	UserID int
+}
+
+func (l Link) Create() (*Link, error) {
+	_, err := DB.Exec(
 		"INSERT INTO links (slug, link, user_id) VALUES (?, ?, ?)",
-		slug,
-		link,
+		l.Slug,
+		l.Link,
 		sql.NullInt32{},
 	)
 
 	if err == sqlite3.ErrConstraint {
-		return fmt.Errorf("Shortened link <strong>%s<strong> already exists!", slug)
+		return nil, fmt.Errorf("Shortened link <strong>%s<strong> already exists!", l.Slug)
 	}
 
-	return nil
+	return &l, nil
 }
 
-func (db *DB) GetShortenedLink(slug string) (string, bool) {
-	var link string
-	if err := db.DB.QueryRow("SELECT link FROM links WHERE slug = ?", slug).Scan(&link); err != nil {
-		return "", false
+func (l Link) Get() (*Link, bool) {
+	if err := DB.QueryRow("SELECT link FROM links WHERE slug = ?", l.Slug).Scan(&l.Link); err != nil {
+		return nil, false
 	}
 
-	return link, true
+	return &l, true
 }
 
-func (db *DB) UpsertUser(user User) (string, error) {
-	row := db.DB.QueryRow(
+type User struct {
+	ID    int
+	Name  string
+	Email string
+	Pic   string
+}
+
+func (u User) Upsert() (*User, error) {
+	row := DB.QueryRow(
 		"INSERT INTO users (name, email, pic) VALUES (?, ?, ?) ON CONFLICT DO UPDATE SET pic = excluded.pic RETURNING id",
-		user.Name,
-		user.Email,
-		user.Pic,
+		u.Name,
+		u.Email,
+		u.Pic,
 	)
 
-	var result string
-	if err := row.Scan(&result); err != nil {
-		return "", err
+	if err := row.Scan(&u.ID); err != nil {
+		return nil, err
 	}
 
-	return result, nil
+	return &u, nil
 }

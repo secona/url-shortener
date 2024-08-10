@@ -12,7 +12,7 @@ import (
 var slugRegex = regexp.MustCompile(`^[a-zA-Z0-9\-]+$`)
 
 type TokenClaims struct {
-	UserID string `json:"user_id"`
+	UserID int `json:"user_id"`
 	jwt.RegisteredClaims
 }
 
@@ -44,7 +44,7 @@ func parseSlug(slug string) (string, error) {
 	return slug, nil
 }
 
-func createAccessToken(userID string) (string, time.Time, error) {
+func createAccessToken(userID int) (string, time.Time, error) {
 	expiresAt := time.Now().Add(time.Hour * 24 * 7)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, TokenClaims{

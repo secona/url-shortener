@@ -15,7 +15,7 @@ var ClientID string
 var JwtSecret []byte
 
 func CreateMux() *chi.Mux {
-	db := database.Open()
+	database.Open()
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -43,7 +43,10 @@ func CreateMux() *chi.Mux {
 			return
 		}
 
-		err = db.CreateShortenedLink(slug, url.String())
+		_, err = database.Link{
+			Slug: slug,
+			Link: url.String(),
+		}.Create()
 
 		if err != nil {
 			fmt.Fprintf(w, err.Error())
@@ -63,18 +66,18 @@ func CreateMux() *chi.Mux {
 			return
 		}
 
-		userID, err := db.UpsertUser(database.User{
+		user, err := database.User{
 			Name:  payload.Claims["name"].(string),
 			Email: payload.Claims["email"].(string),
 			Pic:   payload.Claims["picture"].(string),
-		})
+		}.Upsert()
 
 		if err != nil {
 			fmt.Fprintf(w, err.Error())
 			return
 		}
 
-		token, expiresAt, err := createAccessToken(userID)
+		token, expiresAt, err := createAccessToken(user.ID)
 
 		if err != nil {
 			fmt.Fprintf(w, err.Error())
@@ -94,7 +97,7 @@ func CreateMux() *chi.Mux {
 
 	r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
 		slug := r.URL.String()[1:]
-		value, ok := db.GetShortenedLink(slug)
+		link, ok := database.Link{Slug: slug}.Get()
 
 		if !ok {
 			t := template.Must(template.ParseFiles("templates/404.html"))
@@ -102,7 +105,7 @@ func CreateMux() *chi.Mux {
 			return
 		}
 
-		http.Redirect(w, r, value, 301)
+		http.Redirect(w, r, link.Link, 301)
 	})
 
 	return r

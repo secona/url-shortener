@@ -5,16 +5,17 @@ import (
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/secona/url-shortener/database"
+
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func main() {
 	log.Println("Running database migrations...")
 
-	db := database.Open()
+	database.Open()
 
-	driver, err := sqlite3.WithInstance(db.DB, &sqlite3.Config{})
+	driver, err := sqlite3.WithInstance(database.DB, &sqlite3.Config{})
 
 	if err != nil {
 		log.Fatalf("Error creating sqlite3 instance: %s", err.Error())
