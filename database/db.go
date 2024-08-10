@@ -39,8 +39,14 @@ func (l Link) Create() (*Link, error) {
 		sql.NullInt32{},
 	)
 
-	if err == sqlite3.ErrConstraint {
-		return nil, fmt.Errorf("Shortened link <strong>%s<strong> already exists!", l.Slug)
+	if err != nil {
+		if err, ok := err.(sqlite3.Error); ok {
+			if err.Code == sqlite3.ErrConstraint {
+				return nil, fmt.Errorf("Shortened link <strong>%s<strong> already exists!", l.Slug)
+			}
+		}
+
+		return nil, fmt.Errorf("Error shortening link")
 	}
 
 	return &l, nil
