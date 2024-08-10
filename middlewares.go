@@ -9,20 +9,19 @@ import (
 func authenticated(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth, err := r.Cookie("access_token")
+		ctx := context.WithValue(r.Context(), "user_id", 0)
 
-		if err != nil {
-			fmt.Fprintf(w, "Error getting access token: %s", err.Error())
-			return
+		if err == nil {
+			parsed, err := parseAccessToken(auth.Value)
+
+			if err != nil {
+				fmt.Fprintf(w, "Error verifying JWT: %s", err.Error())
+				return
+			}
+			
+			ctx = context.WithValue(r.Context(), "user_id", parsed.UserID)
 		}
 
-		parsed, err := parseAccessToken(auth.Value)
-
-		if err != nil {
-			fmt.Fprintf(w, "Error verifying JWT: %s", err.Error())
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), "user_id", parsed.UserID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

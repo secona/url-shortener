@@ -46,6 +46,7 @@ func CreateMux() *chi.Mux {
 		_, err = database.Link{
 			Slug: slug,
 			Link: url.String(),
+			UserID: r.Context().Value("user_id").(int),
 		}.Create()
 
 		if err != nil {

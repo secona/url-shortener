@@ -36,7 +36,10 @@ func (l Link) Create() (*Link, error) {
 		"INSERT INTO links (slug, link, user_id) VALUES (?, ?, ?)",
 		l.Slug,
 		l.Link,
-		sql.NullInt32{},
+		sql.NullInt32{
+			Int32: int32(l.UserID),
+			Valid: l.UserID != 0,
+		},
 	)
 
 	if err != nil {
